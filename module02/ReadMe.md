@@ -1,4 +1,145 @@
-Great. First UI will be:
+
+
+
+From the terminal, do this step by step.
+
+### Step 1: Become root (if not already)
+
+```bash
+su -
+```
+
+Enter password.
+
+Verify:
+
+```bash
+whoami
+```
+
+Expected:
+
+```text
+root
+```
+
+---
+
+### Step 2: Open the hosts file
+
+Using nano:
+
+```bash
+nano /etc/hosts
+```
+
+If nano is unavailable:
+
+```bash
+vi /etc/hosts
+```
+
+---
+
+### Step 3: Add this line at the bottom
+
+```text
+127.0.0.1 kafka
+```
+
+Your file may look like:
+
+```text
+127.0.0.1 localhost localhost.localdomain
+::1 localhost localhost.localdomain
+
+127.0.0.1 kafka
+```
+
+---
+
+### Step 4: Save and exit
+
+#### If using nano
+
+Press:
+
+```
+Ctrl + O
+```
+
+Press **Enter** to save.
+
+Then:
+
+```
+Ctrl + X
+```
+
+to exit.
+
+---
+
+#### If using vi
+
+Press:
+
+```
+i
+```
+
+to edit.
+
+After adding the line, press:
+
+```
+Esc
+```
+
+Then type:
+
+```text
+:wq
+```
+
+and press Enter.
+
+---
+
+### Step 5: Verify
+
+```bash
+cat /etc/hosts
+```
+
+You should see:
+
+```text
+127.0.0.1 kafka
+```
+
+---
+
+### Step 6: Test name resolution
+
+```bash
+ping kafka
+```
+
+Expected:
+
+```text
+PING kafka (127.0.0.1)
+```
+
+Stop after a few lines with:
+
+```
+Ctrl + C
+```
+
+---
+
 
 # UI 1: Hospital Registration Portal
 
