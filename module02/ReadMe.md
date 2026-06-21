@@ -246,7 +246,12 @@ src/main/resources/
 ```
 
 ---
+#  Pom.xml
 
+<dependency>
+        <groupId>com.fasterxml.jackson.core</groupId>
+        <artifactId>jackson-databind</artifactId>
+</dependency>
 
 #  HospitalRegistrationUiApplication
 
