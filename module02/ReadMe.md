@@ -633,7 +633,7 @@ Insurance Service Received: {...}
 
 ---
 
-# Teaching Point
+# Important Point
 
 This one UI explains:
 
