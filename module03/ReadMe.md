@@ -686,3 +686,79 @@ New consumer group = new reading position.
 So replay becomes possible.
 ```
 
+# How many partitions
+
+ **it created 3 partitions**, because in `KafkaTopicConfig` we had:
+
+```java
+@Bean
+public NewTopic ordersTopic() {
+    return new NewTopic("orders-topic", 3, (short) 1);
+}
+```
+
+So internally:
+
+```text
+orders-topic
+
+----------------------
+| P0 | P1 | P2 |
+----------------------
+```
+
+However, there is an important subtlety.
+
+### Your two consumers:
+
+```text
+billing-service
+replay-service
+```
+
+are **different consumer groups**.
+
+Therefore both groups receive **all messages**.
+
+Conceptually:
+
+```text
+                 orders-topic
+         -------------------------
+         | P0 | P1 | P2 |
+         -------------------------
+              /           \
+             /             \
+ billing-service       replay-service
+ (group 1)             (group 2)
+
+Both read all partitions
+Both maintain separate offsets
+```
+
+---
+
+### Inside billing-service
+
+You currently have only one consumer instance:
+
+```java
+@KafkaListener(
+    topics = "orders-topic",
+    groupId = "billing-service"
+)
+```
+
+Therefore one consumer owns all partitions:
+
+```text
+billing-service
+
+Consumer 1
+
+P0
+P1
+P2
+```
+
+No parallelism yet.
