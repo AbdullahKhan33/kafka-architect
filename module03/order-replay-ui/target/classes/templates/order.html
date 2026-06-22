@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Order Replay Portal</title>
+    <style>
+        body {
+            font-family: Arial;
+            margin: 40px;
+            background-color: #f4f6f8;
+        }
+
+        .container {
+            display: flex;
+            gap: 30px;
+        }
+
+        .card {
+            width: 430px;
+            background: white;
+            padding: 25px;
+            border-radius: 10px;
+        }
+
+        input, button {
+            width: 100%;
+            padding: 10px;
+            margin-top: 12px;
+        }
+
+        button {
+            background: #2e7d32;
+            color: white;
+            border: none;
+            cursor: pointer;
+        }
+
+        .success {
+            margin-top: 20px;
+            color: green;
+            font-weight: bold;
+        }
+
+        .info {
+            background: #eef3ff;
+            padding: 15px;
+            border-radius: 8px;
+            line-height: 1.6;
+        }
+    </style>
+</head>
+<body>
+
+<h2>Order Replay Portal</h2>
+
+<div class="container">
+
+    <div class="card">
+        <h3>Place Order</h3>
+
+        <form method="post" action="/orders">
+            <input type="text" name="customerName" placeholder="Customer Name" required>
+            <input type="number" step="0.01" name="amount" placeholder="Order Amount" required>
+
+            <button type="submit">Place Order</button>
+        </form>
+
+        <div class="success" th:if="${message}">
+            <p th:text="${message}"></p>
+            <p>Order ID: <span th:text="${orderId}"></span></p>
+        </div>
+    </div>
+
+    <div class="card">
+        <h3>Kafka Concepts</h3>
+
+        <div class="info">
+            <p><b>Producer:</b> This UI publishes order events.</p>
+            <p><b>Topic:</b> orders-topic stores events.</p>
+            <p><b>Billing Consumer:</b> Processes orders.</p>
+            <p><b>Replay Consumer:</b> Reads order history using another group.</p>
+            <p><b>Key Idea:</b> Different consumer groups can replay the same topic independently.</p>
+        </div>
+    </div>
+
+</div>
+
+</body>
+</html>
