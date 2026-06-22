@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title>E-Commerce Kafka Transaction Publisher</title>
+
+    <style>
+        body {
+            font-family: Arial;
+            background-color: #f4f6f8;
+            margin: 40px;
+        }
+
+        h1 {
+            color: #333;
+        }
+
+        .container {
+            display: flex;
+            gap: 35px;
+        }
+
+        .card {
+            width: 470px;
+            background: white;
+            padding: 25px;
+            border-radius: 10px;
+            box-shadow: 0 2px 8px rgba(0,0,0,.1);
+        }
+
+        input, select {
+            width: 100%;
+            padding: 12px;
+            margin-top: 12px;
+            box-sizing: border-box;
+        }
+
+        button {
+            width: 100%;
+            margin-top: 20px;
+            padding: 12px;
+            background: #1565c0;
+            color: white;
+            border: none;
+            cursor: pointer;
+            font-size: 16px;
+            border-radius: 5px;
+        }
+
+        button:hover {
+            background: #0d47a1;
+        }
+
+        .success {
+            margin-top: 20px;
+            background: #e8f5e9;
+            color: #1b5e20;
+            padding: 15px;
+            border-radius: 8px;
+        }
+
+        .error {
+            margin-top: 20px;
+            background: #ffebee;
+            color: #b71c1c;
+            padding: 15px;
+            border-radius: 8px;
+        }
+
+        .info {
+            background: #e3f2fd;
+            padding: 18px;
+            border-radius: 8px;
+            line-height: 1.7;
+        }
+
+        code {
+            background: #eeeeee;
+            padding: 3px 7px;
+        }
+
+        pre {
+            background: #f7f7f7;
+            padding: 15px;
+            border-radius: 8px;
+            overflow-x: auto;
+        }
+
+        .checkbox-row {
+            margin-top: 15px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .checkbox-row input {
+            width: auto;
+            margin-top: 0;
+        }
+    </style>
+</head>
+<body>
+
+<h1>E-Commerce Kafka Transaction Publisher</h1>
+
+<div class="container">
+
+    <div class="card">
+
+        <h2>Place Order</h2>
+
+        <form method="post" action="/place-order">
+
+            <label>Customer Name</label>
+            <input type="text" name="customerName" placeholder="Customer Name" required>
+
+            <label>Product Name</label>
+            <select name="productName" required>
+                <option value="">Select Product</option>
+                <option value="Laptop">Laptop</option>
+                <option value="Mobile Phone">Mobile Phone</option>
+                <option value="Headphones">Headphones</option>
+                <option value="Keyboard">Keyboard</option>
+                <option value="Monitor">Monitor</option>
+            </select>
+
+            <label>Quantity</label>
+            <input type="number" name="quantity" placeholder="Quantity" required>
+
+            <label>Price</label>
+            <input type="number" step="0.01" name="price" placeholder="Price" required>
+
+            <div class="checkbox-row">
+                <input type="checkbox" name="simulateFailure" value="true">
+                <label>Simulate failure after order event</label>
+            </div>
+
+            <button type="submit">Place Order Transactionally</button>
+
+        </form>
+
+        <div class="success" th:if="${successMessage}">
+            <h3>Transaction Committed</h3>
+            <p th:text="${successMessage}"></p>
+            <p>Order ID: <b th:text="${orderId}"></b></p>
+        </div>
+
+        <div class="error" th:if="${errorMessage}">
+            <h3>Transaction Aborted</h3>
+            <p th:text="${errorMessage}"></p>
+            <p th:text="${errorDetails}"></p>
+        </div>
+
+    </div>
+
+    <div class="card">
+
+        <h2>Kafka Transaction Concept</h2>
+
+        <div class="info">
+            <p><b>Topic 1:</b> <code>ecommerce-orders-topic</code></p>
+            <p><b>Topic 2:</b> <code>ecommerce-inventory-topic</code></p>
+
+            <p>
+                One button publishes to both topics inside one Kafka transaction.
+            </p>
+
+            <hr>
+
+            <h3>Success Case</h3>
+
+            <pre>
+BEGIN TRANSACTION
+
+orders-topic
+  ORDER_PLACED
+
+inventory-topic
+  INVENTORY_RESERVED
+
+COMMIT
+            </pre>
+
+            <h3>Failure Case</h3>
+
+            <pre>
+BEGIN TRANSACTION
+
+orders-topic
+  ORDER_PLACED
+
+Simulated Failure
+
+ABORT
+
+No committed event should be visible
+            </pre>
+
+            <h3>Key Learning</h3>
+
+            <ul>
+                <li>Kafka can publish atomically to multiple topics.</li>
+                <li>Either all events are committed or none are visible.</li>
+                <li>Consumers with read_committed only read committed records.</li>
+                <li>This prevents partial event publishing.</li>
+            </ul>
+        </div>
+
+    </div>
+
+</div>
+
+</body>
+</html>
