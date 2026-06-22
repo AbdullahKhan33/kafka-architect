@@ -602,3 +602,87 @@ Replay Service Read History: old orders also appear
 ```
 
 ---
+
+
+
+# This is exactly what happened:
+
+```text
+                         orders-topic
+        ------------------------------------------------
+        | Offset 0 | Offset 1 | Offset 2 | Offset 3 |
+        | ORD1001  | ORD1002  | ORD1003  | ORD1004  |
+        ------------------------------------------------
+              ↑
+              Kafka keeps these messages
+              even after Billing consumes them
+```
+
+```text
+                 Consumer Group 1
+                 billing-service
+
+        Reads:
+        Offset 0 → ORD1001
+        Offset 1 → ORD1002
+        Offset 2 → ORD1003
+
+        Bookmark stored:
+        billing-service offset = 3
+```
+
+```text
+                 Consumer Group 2
+                 replay-service-v2
+
+        Brand new group
+        No previous bookmark
+
+        Because:
+        auto-offset-reset = earliest
+
+        Kafka says:
+        "Start from Offset 0"
+
+        Reads:
+        Offset 0 → ORD1001
+        Offset 1 → ORD1002
+        Offset 2 → ORD1003
+        Offset 3 → ORD1004
+```
+
+# Final Picture
+
+```text
+                  Order UI
+                     |
+                     v
+              Order Producer
+                     |
+                     v
+              orders-topic
+   ------------------------------------------------
+   | ORD1001 | ORD1002 | ORD1003 | ORD1004 |
+   ------------------------------------------------
+        |                         |
+        |                         |
+        v                         v
+
+ billing-service             replay-service-v2
+ already consumed            new consumer group
+ starts from latest          starts from beginning
+ using its offset            because no old offset
+```
+
+# Key Learning
+
+```text
+Kafka topic stores the events.
+
+Consumer group stores the reading position.
+
+New consumer group = new reading position.
+
+So replay becomes possible.
+```
+
