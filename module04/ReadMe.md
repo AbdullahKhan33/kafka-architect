@@ -368,72 +368,107 @@ src/main/resources/templates/trade.html
 
 ```html
 <!DOCTYPE html>
-<html>
+<html xmlns:th="http://www.thymeleaf.org">
 <head>
     <title>Stock Trading Partition Dashboard</title>
+
     <style>
-        body {
+
+        body{
             font-family: Arial;
-            margin: 40px;
-            background-color: #f4f6f8;
+            background-color:#f4f6f8;
+            margin:40px;
         }
 
-        .container {
-            display: flex;
-            gap: 30px;
+        h1{
+            color:#333;
         }
 
-        .card {
-            width: 450px;
-            background: white;
-            padding: 25px;
-            border-radius: 10px;
+        .container{
+            display:flex;
+            gap:40px;
         }
 
-        input, select, button {
-            width: 100%;
-            padding: 10px;
-            margin-top: 12px;
+        .card{
+            width:450px;
+            background:white;
+            padding:25px;
+            border-radius:10px;
+            box-shadow:0 2px 8px rgba(0,0,0,.1);
         }
 
-        button {
-            background: #6a1b9a;
-            color: white;
-            border: none;
-            cursor: pointer;
+        input,select{
+            width:100%;
+            padding:12px;
+            margin-top:15px;
+            box-sizing:border-box;
         }
 
-        .success {
-            margin-top: 20px;
-            color: green;
-            font-weight: bold;
+        button{
+            width:100%;
+            margin-top:20px;
+            padding:12px;
+            background:#6a1b9a;
+            color:white;
+            border:none;
+            cursor:pointer;
+            font-size:16px;
+            border-radius:5px;
         }
 
-        .info {
-            background: #f3e5f5;
-            padding: 15px;
-            border-radius: 8px;
-            line-height: 1.6;
+        button:hover{
+            background:#4a148c;
         }
 
-        code {
-            background: #eeeeee;
-            padding: 2px 5px;
+        .success{
+            margin-top:20px;
+            background:#e8f5e9;
+            padding:15px;
+            border-radius:8px;
         }
+
+        .info{
+            background:#ede7f6;
+            padding:20px;
+            border-radius:8px;
+            line-height:1.8;
+        }
+
+        .info code{
+            background:#f5f5f5;
+            padding:3px 8px;
+        }
+
     </style>
+
 </head>
 <body>
 
-<h2>Stock Trading Partition Dashboard</h2>
+<h1>Stock Trading Partition Dashboard</h1>
 
 <div class="container">
 
     <div class="card">
-        <h3>Place Trade</h3>
+
+        <h2>Place Trade</h2>
 
         <form method="post" action="/trades">
 
-            <input type="text" name="stockSymbol" placeholder="Stock Symbol e.g. AAPL" required>
+            <label>Stock Symbol</label>
+
+            <select name="stockSymbol" required>
+                <option value="">Select Stock Symbol</option>
+                <option value="AAPL">AAPL - Apple</option>
+                <option value="MSFT">MSFT - Microsoft</option>
+                <option value="GOOG">GOOG - Google</option>
+                <option value="AMZN">AMZN - Amazon</option>
+                <option value="TSLA">TSLA - Tesla</option>
+                <option value="NFLX">NFLX - Netflix</option>
+                <option value="META">META - Meta</option>
+                <option value="NVDA">NVDA - Nvidia</option>
+            </select>
+
+            <label>Trade Type</label>
 
             <select name="tradeType" required>
                 <option value="">Select Trade Type</option>
@@ -441,31 +476,156 @@ src/main/resources/templates/trade.html
                 <option value="SELL">SELL</option>
             </select>
 
-            <input type="number" name="quantity" placeholder="Quantity" required>
+            <label>Quantity</label>
 
-            <input type="number" step="0.01" name="price" placeholder="Price" required>
+            <input
+                    type="number"
+                    name="quantity"
+                    placeholder="Quantity"
+                    required>
 
-            <button type="submit">Submit Trade</button>
+            <label>Price</label>
+
+            <input
+                    type="number"
+                    step="0.01"
+                    name="price"
+                    placeholder="Price"
+                    required>
+
+            <button type="submit">
+                Submit Trade
+            </button>
+
         </form>
 
         <div class="success" th:if="${message}">
+
+            <h3>Trade Submitted Successfully</h3>
+
+            <p>
+                Trade ID :
+                <b th:text="${tradeId}"></b>
+            </p>
+
+            <p>
+                Stock Symbol :
+                <b th:text="${stockSymbol}"></b>
+            </p>
+
             <p th:text="${message}"></p>
-            <p>Trade ID: <span th:text="${tradeId}"></span></p>
-            <p>Kafka Key: <span th:text="${stockSymbol}"></span></p>
+
         </div>
+
     </div>
 
+
     <div class="card">
-        <h3>Kafka Concept</h3>
+
+        <h2>Kafka Partition Concepts</h2>
 
         <div class="info">
-            <p><b>Topic:</b> <code>trades-topic</code></p>
-            <p><b>Partitions:</b> 3</p>
-            <p><b>Kafka Key:</b> Stock Symbol</p>
-            <p><b>Rule:</b> Same key goes to same partition.</p>
-            <p><b>Example:</b> All AAPL trades go to the same partition.</p>
-            <p><b>Why?</b> Ordering is preserved inside a partition.</p>
+
+            <p>
+                <b>Topic :</b>
+                <code>trades-topic</code>
+            </p>
+
+            <p>
+                <b>Partitions :</b>
+                3
+            </p>
+
+            <p>
+                <b>Kafka Key :</b>
+                Stock Symbol
+            </p>
+
+            <p>
+                Same stock symbol always goes to the same partition.
+            </p>
+
+            <hr>
+
+            <h3>Example</h3>
+
+            <pre>
+AAPL BUY
+AAPL SELL
+AAPL BUY
+
+↓ Same Key
+
+Partition 1
+
+
+MSFT BUY
+MSFT SELL
+
+↓ Same Key
+
+Partition 2
+
+
+TSLA BUY
+TSLA SELL
+
+↓ Same Key
+
+Partition 0
+            </pre>
+
+            <hr>
+
+            <h3>Partition Diagram</h3>
+
+            <pre>
+
+                trades-topic
+
+        +-----------------------------+
+
+        Partition 0
+        TSLA BUY
+        TSLA SELL
+
+        -------------------------------
+
+        Partition 1
+        AAPL BUY
+        AAPL SELL
+        AAPL BUY
+
+        -------------------------------
+
+        Partition 2
+        MSFT BUY
+        MSFT SELL
+
+        +-----------------------------+
+
+            </pre>
+
+            <hr>
+
+            <h3>Key Learning</h3>
+
+            <ul>
+
+                <li>Same key → Same partition</li>
+
+                <li>Ordering guaranteed inside a partition</li>
+
+                <li>Different keys may go to different partitions</li>
+
+                <li>Partitions provide parallel processing</li>
+
+                <li>Consumer groups enable scalability</li>
+
+            </ul>
+
         </div>
+
     </div>
 
 </div>
