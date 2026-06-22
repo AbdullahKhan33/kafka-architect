@@ -119,10 +119,12 @@ spring.kafka.consumer.value-deserializer=org.apache.kafka.common.serialization.S
 
 #  Pom.xml
 
+```
 <dependency>
         <groupId>com.fasterxml.jackson.core</groupId>
         <artifactId>jackson-databind</artifactId>
 </dependency>
+```
 
 ---
 
