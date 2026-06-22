@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title>Live Portfolio Dashboard using Kafka Streams</title>
+
+    <style>
+
+        body{
+            font-family: Arial,sans-serif;
+            background:#f5f5f5;
+            margin:0;
+            padding:30px;
+        }
+
+        h1{
+            margin-bottom:30px;
+        }
+
+        .container{
+            display:flex;
+            gap:40px;
+        }
+
+        .left{
+            width:50%;
+            background:white;
+            padding:30px;
+            border-radius:15px;
+        }
+
+        .right{
+            width:50%;
+            background:white;
+            padding:30px;
+            border-radius:15px;
+        }
+
+        select,input{
+            width:100%;
+            padding:15px;
+            margin-top:10px;
+            margin-bottom:20px;
+            font-size:18px;
+        }
+
+        button{
+            width:100%;
+            background:teal;
+            color:white;
+            padding:15px;
+            border:none;
+            border-radius:5px;
+            font-size:24px;
+            cursor:pointer;
+        }
+
+        table{
+            width:100%;
+            border-collapse:collapse;
+        }
+
+        th{
+            background:#eeeeee;
+            padding:15px;
+            text-align:left;
+        }
+
+        td{
+            padding:15px;
+            border-bottom:1px solid lightgray;
+        }
+
+        .box{
+            background:#dfeef6;
+            margin-top:30px;
+            padding:25px;
+            border-radius:10px;
+        }
+
+    </style>
+
+</head>
+<body>
+
+<h1>Live Portfolio Dashboard using Kafka Streams</h1>
+
+<div class="container">
+
+    <!-- LEFT -->
+    <div class="left">
+
+        <h2>Submit Trade</h2>
+
+        <form action="/trades" method="post">
+
+            <h3>Stock Symbol</h3>
+
+            <select name="stockSymbol">
+
+                <option>Select Stock</option>
+                <option>AAPL</option>
+                <option>MSFT</option>
+                <option>GOOG</option>
+                <option>AMZN</option>
+                <option>TSLA</option>
+
+            </select>
+
+            <h3>Quantity</h3>
+
+            <input
+                    type="number"
+                    name="quantity"
+                    placeholder="Quantity">
+
+            <button type="submit">
+                Submit Trade
+            </button>
+
+        </form>
+
+        <div class="box" th:if="${message!=null}">
+
+            <h2>Trade Submitted</h2>
+
+            <h3 th:text="${message}"></h3>
+
+            <h3>
+                Trade ID:
+                <span th:text="${tradeId}"></span>
+            </h3>
+
+        </div>
+
+    </div>
+
+    <!-- RIGHT -->
+    <div class="right">
+
+        <h1>Live Portfolio Summary</h1>
+
+        <table>
+
+            <thead>
+
+            <tr>
+                <th>Stock</th>
+                <th>Total Quantity</th>
+            </tr>
+
+            </thead>
+            <script>
+                async function refreshPortfolio() {
+                    const response = await fetch("/portfolio");
+                    const data = await response.json();
+
+                    const tbody = document.getElementById("portfolioBody");
+                    tbody.innerHTML = "";
+
+                    Object.entries(data).forEach(([stock, quantity]) => {
+                        tbody.innerHTML += `
+                <tr>
+                    <td>${stock}</td>
+                    <td>${quantity}</td>
+                </tr>
+            `;
+                    });
+                }
+
+                setInterval(refreshPortfolio, 1500);
+                refreshPortfolio();
+            </script>
+            <tbody id="portfolioBody">
+
+            <tr th:each="entry : ${portfolio}">
+                <td th:text="${entry.key}"></td>
+                <td th:text="${entry.value}"></td>
+            </tr>
+
+            </tbody>
+
+        </table>
+
+        <div class="box">
+
+            <h2>Kafka Streams Concept</h2>
+
+            <h3>
+                Input Topic:
+                <code>portfolio-trades-topic</code>
+            </h3>
+
+            <h3>
+                Output Topic:
+                <code>portfolio-summary-topic</code>
+            </h3>
+
+            <pre>
+trades-topic
+      ↓
+Kafka Streams
+      ↓
+groupByKey()
+      ↓
+aggregate()
+      ↓
+portfolio-summary-topic
+</pre>
+
+            <p>
+                Kafka Streams continuously calculates the total quantity
+                per stock symbol.
+            </p>
+
+        </div>
+
+    </div>
+
+</div>
+
+
+
+</body>
+</html>
