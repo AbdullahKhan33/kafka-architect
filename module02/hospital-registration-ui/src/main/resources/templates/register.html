@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Hospital Registration Portal</title>
+    <style>
+        body {
+            font-family: Arial;
+            margin: 40px;
+            background-color: #f5f7fa;
+        }
+        .card {
+            width: 420px;
+            background: white;
+            padding: 25px;
+            border-radius: 10px;
+        }
+        input, select, button {
+            width: 100%;
+            padding: 10px;
+            margin-top: 12px;
+        }
+        button {
+            background: #1976d2;
+            color: white;
+            border: none;
+            cursor: pointer;
+        }
+        .success {
+            margin-top: 20px;
+            color: green;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+
+<div class="card">
+    <h2>Hospital Registration Portal</h2>
+
+    <form method="post" action="/register">
+        <input type="text" name="patientName" placeholder="Patient Name" required>
+
+        <select name="department" required>
+            <option value="">Select Department</option>
+            <option value="Cardiology">Cardiology</option>
+            <option value="Neurology">Neurology</option>
+            <option value="Orthopedics">Orthopedics</option>
+            <option value="General Medicine">General Medicine</option>
+        </select>
+
+        <button type="submit">Register Patient</button>
+    </form>
+
+    <div class="success" th:if="${message}">
+        <p th:text="${message}"></p>
+        <p>Patient ID: <span th:text="${patientId}"></span></p>
+    </div>
+</div>
+
+</body>
+</html>
