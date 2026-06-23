@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title>Delivery Status Tracking using Kafka Events</title>
+
+    <style>
+        body {
+            font-family: Arial;
+            background-color: #f4f6f8;
+            margin: 40px;
+        }
+
+        h1 {
+            color: #333;
+        }
+
+        .container {
+            display: flex;
+            gap: 30px;
+            align-items: flex-start;
+        }
+
+        .card {
+            width: 430px;
+            background: white;
+            padding: 25px;
+            border-radius: 10px;
+            box-shadow: 0 2px 8px rgba(0,0,0,.1);
+            margin-bottom: 25px;
+        }
+
+        .wide-card {
+            flex: 1;
+            background: white;
+            padding: 25px;
+            border-radius: 10px;
+            box-shadow: 0 2px 8px rgba(0,0,0,.1);
+            margin-bottom: 25px;
+        }
+
+        input, select {
+            width: 100%;
+            padding: 12px;
+            margin-top: 10px;
+            margin-bottom: 15px;
+            box-sizing: border-box;
+        }
+
+        label {
+            font-weight: bold;
+        }
+
+        button {
+            width: 100%;
+            margin-top: 10px;
+            padding: 12px;
+            background: #1565c0;
+            color: white;
+            border: none;
+            cursor: pointer;
+            font-size: 16px;
+            border-radius: 5px;
+        }
+
+        button:hover {
+            background: #0d47a1;
+        }
+
+        .danger {
+            background: #c62828;
+        }
+
+        .danger:hover {
+            background: #8e0000;
+        }
+
+        .success {
+            margin-bottom: 20px;
+            background: #e0f2f1;
+            color: #004d40;
+            padding: 15px;
+            border-radius: 8px;
+        }
+
+        .info {
+            background: #e3f2fd;
+            padding: 18px;
+            border-radius: 8px;
+            line-height: 1.7;
+            margin-bottom: 25px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 15px;
+            font-size: 14px;
+        }
+
+        th, td {
+            padding: 11px;
+            border-bottom: 1px solid #ddd;
+            text-align: left;
+        }
+
+        th {
+            background-color: #eeeeee;
+        }
+
+        code {
+            background: #eeeeee;
+            padding: 3px 7px;
+        }
+
+        pre {
+            background: #f7f7f7;
+            padding: 15px;
+            border-radius: 8px;
+        }
+
+        .status {
+            font-weight: bold;
+            color: #1565c0;
+        }
+    </style>
+</head>
+
+<body>
+
+<h1>UI-7: Delivery Status Tracking using Multiple Kafka Events</h1>
+
+<div class="info">
+    <h3>Kafka Concept</h3>
+
+    <p>
+        This UI publishes multiple delivery events for the same order into
+        <code>delivery-status-topic</code>.
+    </p>
+
+    <pre>
+ORDER_PLACED
+    ↓
+ORDER_PACKED
+    ↓
+ORDER_SHIPPED
+    ↓
+OUT_FOR_DELIVERY
+    ↓
+DELIVERED
+    </pre>
+
+    <p>
+        Every status change is a separate Kafka event.
+        The dashboard consumer reads the events and updates the latest status.
+    </p>
+</div>
+
+<div th:if="${message}" class="success">
+    <h3>Kafka Event Published</h3>
+    <p th:text="${message}"></p>
+    <p>Order ID: <b th:text="${orderId}"></b></p>
+</div>
+
+<div class="container">
+
+    <div>
+
+        <div class="card">
+            <h2>Create Order</h2>
+
+            <form method="post" action="/orders">
+
+                <label>Customer Name</label>
+                <input type="text" name="customerName" value="Abdullah" required>
+
+                <label>Product Name</label>
+                <input type="text" name="productName" value="Laptop" required>
+
+                <button type="submit">Create Order</button>
+
+            </form>
+        </div>
+
+        <div class="card">
+            <h2>Update Delivery Status</h2>
+
+            <form method="post" action="/delivery-status">
+
+                <label>Order ID</label>
+                <input type="text" name="orderId" placeholder="Example: ORD-ABCDE" required>
+
+                <label>Customer Name</label>
+                <input type="text" name="customerName" value="Abdullah" required>
+
+                <label>Product Name</label>
+                <input type="text" name="productName" value="Laptop" required>
+
+                <label>Delivery Status</label>
+                <select name="deliveryStatus" required>
+                    <option value="">Select Status</option>
+                    <option value="ORDER_PACKED">ORDER_PACKED</option>
+                    <option value="ORDER_SHIPPED">ORDER_SHIPPED</option>
+                    <option value="OUT_FOR_DELIVERY">OUT_FOR_DELIVERY</option>
+                    <option value="DELIVERED">DELIVERED</option>
+                </select>
+
+                <button type="submit">Publish Status Event</button>
+
+            </form>
+        </div>
+
+        <div class="card">
+            <h2>Clear Dashboard</h2>
+
+            <form method="post" action="/clear">
+                <button class="danger" type="submit">Clear All Data</button>
+            </form>
+        </div>
+
+    </div>
+
+    <div class="wide-card">
+
+        <h2>Current Delivery Status</h2>
+
+        <table>
+            <thead>
+            <tr>
+                <th>Order ID</th>
+                <th>Customer</th>
+                <th>Product</th>
+                <th>Current Status</th>
+                <th>Last Updated</th>
+            </tr>
+            </thead>
+
+            <tbody>
+            <tr th:each="entry : ${orders}">
+                <td th:text="${entry.value.orderId}"></td>
+                <td th:text="${entry.value.customerName}"></td>
+                <td th:text="${entry.value.productName}"></td>
+                <td class="status" th:text="${entry.value.currentStatus}"></td>
+                <td th:text="${entry.value.lastUpdatedTime}"></td>
+            </tr>
+            </tbody>
+        </table>
+
+        <h2>Kafka Event History</h2>
+
+        <table>
+            <thead>
+            <tr>
+                <th>Order ID</th>
+                <th>Event Type</th>
+                <th>Status</th>
+                <th>Topic</th>
+                <th>Partition</th>
+                <th>Offset</th>
+                <th>Event Time</th>
+            </tr>
+            </thead>
+
+            <tbody>
+            <tr th:each="log : ${logs}">
+                <td th:text="${log.orderId}"></td>
+                <td th:text="${log.eventType}"></td>
+                <td class="status" th:text="${log.deliveryStatus}"></td>
+                <td th:text="${log.topic}"></td>
+                <td th:text="${log.partition}"></td>
+                <td th:text="${log.offset}"></td>
+                <td th:text="${log.eventTime}"></td>
+            </tr>
+            </tbody>
+        </table>
+
+    </div>
+
+</div>
+
+</body>
+</html>
