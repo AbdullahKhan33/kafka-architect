@@ -1,0 +1,441 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title>Order Fulfillment Workflow using Kafka</title>
+
+    <style>
+        body {
+            font-family: Arial;
+            background-color: #f4f6f8;
+            margin: 40px;
+        }
+
+        h1 {
+            color: #333;
+        }
+
+        .container {
+            display: flex;
+            gap: 30px;
+            align-items: flex-start;
+        }
+
+        .card {
+            width: 430px;
+            background: white;
+            padding: 25px;
+            border-radius: 10px;
+            box-shadow: 0 2px 8px rgba(0,0,0,.1);
+            margin-bottom: 25px;
+        }
+
+        .wide-card {
+            flex: 1;
+            background: white;
+            padding: 25px;
+            border-radius: 10px;
+            box-shadow: 0 2px 8px rgba(0,0,0,.1);
+            margin-bottom: 25px;
+        }
+
+        input {
+            width: 100%;
+            padding: 12px;
+            margin-top: 10px;
+            margin-bottom: 15px;
+            box-sizing: border-box;
+        }
+
+        label {
+            font-weight: bold;
+        }
+
+        button {
+            width: 100%;
+            margin-top: 10px;
+            padding: 12px;
+            background: #1565c0;
+            color: white;
+            border: none;
+            cursor: pointer;
+            font-size: 16px;
+            border-radius: 5px;
+        }
+
+        button:hover {
+            background: #0d47a1;
+        }
+
+        .danger {
+            background: #c62828;
+        }
+
+        .danger:hover {
+            background: #8e0000;
+        }
+
+        .refresh {
+            background: #2e7d32;
+        }
+
+        .refresh:hover {
+            background: #1b5e20;
+        }
+
+        .info {
+            background: #e3f2fd;
+            padding: 18px;
+            border-radius: 8px;
+            line-height: 1.7;
+            margin-bottom: 25px;
+        }
+
+        .clarification {
+            background: #fff3cd;
+            padding: 18px;
+            border-radius: 8px;
+            line-height: 1.7;
+            margin-bottom: 25px;
+        }
+
+        .trace-active {
+            background: #e8f5e9;
+            border-left: 8px solid #2e7d32;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 25px;
+        }
+
+        .trace-active h2 {
+            color: #1b5e20;
+            margin-top: 0;
+        }
+
+        .not-found {
+            background: #ffebee;
+            color: #b71c1c;
+            padding: 15px;
+            border-radius: 8px;
+            font-weight: bold;
+            margin-top: 15px;
+        }
+
+        .note {
+            font-size: 14px;
+            color: #555;
+            line-height: 1.6;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 15px;
+            font-size: 14px;
+            margin-bottom: 35px;
+        }
+
+        th, td {
+            padding: 11px;
+            border-bottom: 1px solid #ddd;
+            text-align: left;
+        }
+
+        th {
+            background-color: #eeeeee;
+        }
+
+        code {
+            background: #eeeeee;
+            padding: 3px 7px;
+        }
+
+        pre {
+            background: #f7f7f7;
+            padding: 15px;
+            border-radius: 8px;
+        }
+
+        .status {
+            font-weight: bold;
+            color: #1565c0;
+        }
+
+        .event {
+            font-weight: bold;
+            color: #6a1b9a;
+        }
+
+        .topic {
+            color: #444;
+            font-family: monospace;
+        }
+    </style>
+</head>
+
+<body>
+
+<h1>UI-13: Order Fulfillment Workflow using Kafka Event Choreography</h1>
+
+<div class="info">
+    <h3>Kafka Event Choreography Flow</h3>
+
+    <p>
+        Each service listens to one topic and publishes the next event.
+        This creates sequencing without one central workflow controller.
+    </p>
+
+    <pre>
+ORDER_PLACED
+    ↓
+PaymentConsumer
+    ↓
+PAYMENT_RECEIVED
+    ↓
+PackingConsumer
+    ↓
+ORDER_PACKED
+    ↓
+ShippingConsumer
+    ↓
+ORDER_SHIPPED
+    ↓
+DeliveryConsumer
+    ↓
+DELIVERED
+    </pre>
+</div>
+
+<div class="clarification">
+    <h3>Important Clarification</h3>
+
+    <p>
+        Kafka transports and stores events.
+        Kafka does not decide business rules like payment before packing.
+    </p>
+
+    <p>
+        The sequence is created by application design.
+        PackingConsumer listens only to payment-events-topic.
+        Therefore, packing starts only after a PAYMENT_RECEIVED event exists.
+    </p>
+
+    <p>
+        In this demo, orderId and correlationId are the same.
+        In production, correlation ID may be a separate technical trace ID.
+    </p>
+
+    <p>
+        The trace dashboard is an application-level view.
+        In production, this trace data should go to a database,
+        Elasticsearch, OpenSearch, Azure AI Search, or an observability platform.
+    </p>
+</div>
+
+<div class="container">
+
+    <div>
+
+        <div class="card">
+            <h2>Place Order</h2>
+
+            <form method="post" action="/orders">
+
+                <label>Customer Name</label>
+                <input type="text" name="customerName" value="Abdullah" required>
+
+                <label>Product Name</label>
+                <input type="text" name="productName" value="Laptop" required>
+
+                <label>Amount</label>
+                <input type="number" step="0.01" name="amount" value="65000" required>
+
+                <button type="submit">Place Order</button>
+
+            </form>
+        </div>
+
+        <div class="card">
+            <h2>Trace Order by Order ID</h2>
+
+            <p class="note">
+                Copy the Order ID from the Current Order Status table and paste it here.
+                In this demo, correlation ID is the same as order ID.
+            </p>
+
+            <form method="get" action="/trace">
+
+                <label>Order ID</label>
+                <input type="text"
+                       name="orderId"
+                       placeholder="Example: ORD-ABCDE"
+                       th:value="${searchedOrderId}"
+                       required>
+
+                <button type="submit">Trace Order</button>
+
+            </form>
+        </div>
+
+        <div class="card">
+            <h2>Show All Orders</h2>
+
+            <form method="get" action="/">
+                <button class="refresh" type="submit">Show Full Dashboard</button>
+            </form>
+        </div>
+
+        <div class="card">
+            <h2>Refresh Dashboard</h2>
+
+            <p class="note">
+                Click refresh after placing an order to see the latest workflow status.
+            </p>
+
+            <form method="get" action="/">
+                <button class="refresh" type="submit">Refresh</button>
+            </form>
+        </div>
+
+        <div class="card">
+            <h2>Clear Application View</h2>
+
+            <form method="post" action="/clear">
+                <button class="danger" type="submit">Clear Dashboard</button>
+            </form>
+        </div>
+
+        <div class="card">
+            <h2>Production Trace Store</h2>
+
+            <pre>
+Kafka Topics
+    ↓
+Trace Consumer
+    ↓
+Database
+    ↓
+Elasticsearch / Azure Search
+    ↓
+Trace UI
+            </pre>
+        </div>
+
+    </div>
+
+    <div class="wide-card">
+
+        <div th:if="${traceMode}" class="trace-active">
+
+            <h2>
+                TRACE MODE ACTIVE:
+                <span th:text="${searchedOrderId}"></span>
+            </h2>
+
+            <p>
+                Trace records found:
+                <b th:text="${selectedTraceCount}"></b>
+            </p>
+
+            <p>
+                In this mode, the tables below show only the selected order.
+                Click <b>Show Full Dashboard</b> to return to all orders.
+            </p>
+
+            <div th:if="${selectedTraceCount == 0}" class="not-found">
+                No trace records found for this Order ID.
+                Check the copied Order ID, wait for the workflow to complete, then try again.
+                Also remember: if the application restarted, the in-memory trace view is cleared.
+            </div>
+
+        </div>
+
+        <h2 th:if="${traceMode}">Current Order Status - Selected Order Only</h2>
+        <h2 th:if="${!traceMode}">Current Order Status - All Orders</h2>
+
+        <p class="note" th:if="${!traceMode}">
+            This table shows the latest known status for every order in the application view.
+        </p>
+
+        <p class="note" th:if="${traceMode}">
+            This table is filtered by the searched Order ID.
+        </p>
+
+        <table>
+            <thead>
+            <tr>
+                <th>Order ID</th>
+                <th>Correlation ID</th>
+                <th>Customer</th>
+                <th>Product</th>
+                <th>Amount</th>
+                <th>Current Status</th>
+                <th>Last Updated By</th>
+                <th>Last Updated Time</th>
+            </tr>
+            </thead>
+
+            <tbody>
+            <tr th:each="entry : ${orders}">
+                <td th:text="${entry.value.orderId}"></td>
+                <td th:text="${entry.value.correlationId}"></td>
+                <td th:text="${entry.value.customerName}"></td>
+                <td th:text="${entry.value.productName}"></td>
+                <td th:text="${entry.value.amount}"></td>
+                <td class="status" th:text="${entry.value.currentStatus}"></td>
+                <td th:text="${entry.value.lastUpdatedBy}"></td>
+                <td th:text="${entry.value.lastUpdatedTime}"></td>
+            </tr>
+            </tbody>
+        </table>
+
+        <h2 th:if="${traceMode}">Trace Timeline - Selected Order Only</h2>
+        <h2 th:if="${!traceMode}">All Workflow Events - All Orders</h2>
+
+        <p class="note" th:if="${!traceMode}">
+            This table shows recent workflow events for all orders.
+            Kafka stores the actual event log inside topic partitions.
+            This browser table is only an application-level view.
+        </p>
+
+        <p class="note" th:if="${traceMode}">
+            This timeline shows only events for the searched order ID.
+        </p>
+
+        <table>
+            <thead>
+            <tr>
+                <th>Sequence</th>
+                <th>Order ID</th>
+                <th>Correlation ID</th>
+                <th>Event Type</th>
+                <th>Status</th>
+                <th>Service</th>
+                <th>Topic</th>
+                <th>Partition</th>
+                <th>Offset</th>
+                <th>Event Time</th>
+            </tr>
+            </thead>
+
+            <tbody>
+            <tr th:each="event, iterStat : ${allEvents}">
+                <td th:text="${iterStat.count}"></td>
+                <td th:text="${event.orderId}"></td>
+                <td th:text="${event.correlationId}"></td>
+                <td class="event" th:text="${event.eventType}"></td>
+                <td class="status" th:text="${event.status}"></td>
+                <td th:text="${event.sourceService}"></td>
+                <td class="topic" th:text="${event.topic}"></td>
+                <td th:text="${event.partition}"></td>
+                <td th:text="${event.offset}"></td>
+                <td th:text="${event.eventTime}"></td>
+            </tr>
+            </tbody>
+        </table>
+
+    </div>
+
+</div>
+
+</body>
+</html>
