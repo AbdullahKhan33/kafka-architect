@@ -1,0 +1,404 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+  <title>Inventory Stock Alert using Kafka</title>
+
+  <style>
+    body {
+      font-family: Arial;
+      background-color: #f4f6f8;
+      margin: 40px;
+    }
+
+    h1 {
+      color: #333;
+    }
+
+    .container {
+      display: flex;
+      gap: 30px;
+      align-items: flex-start;
+    }
+
+    .card {
+      width: 430px;
+      background: white;
+      padding: 25px;
+      border-radius: 10px;
+      box-shadow: 0 2px 8px rgba(0,0,0,.1);
+      margin-bottom: 25px;
+    }
+
+    .wide-card {
+      flex: 1;
+      background: white;
+      padding: 25px;
+      border-radius: 10px;
+      box-shadow: 0 2px 8px rgba(0,0,0,.1);
+      margin-bottom: 25px;
+    }
+
+    input, select {
+      width: 100%;
+      padding: 12px;
+      margin-top: 10px;
+      margin-bottom: 15px;
+      box-sizing: border-box;
+    }
+
+    label {
+      font-weight: bold;
+    }
+
+    button {
+      width: 100%;
+      margin-top: 10px;
+      padding: 12px;
+      background: #1565c0;
+      color: white;
+      border: none;
+      cursor: pointer;
+      font-size: 16px;
+      border-radius: 5px;
+    }
+
+    button:hover {
+      background: #0d47a1;
+    }
+
+    .danger {
+      background: #c62828;
+    }
+
+    .danger:hover {
+      background: #8e0000;
+    }
+
+    .success {
+      margin-bottom: 20px;
+      background: #e0f2f1;
+      color: #004d40;
+      padding: 15px;
+      border-radius: 8px;
+    }
+
+    .info {
+      background: #e3f2fd;
+      padding: 18px;
+      border-radius: 8px;
+      line-height: 1.7;
+      margin-bottom: 25px;
+    }
+
+    .clarification {
+      background: #fff3cd;
+      padding: 18px;
+      border-radius: 8px;
+      line-height: 1.7;
+      margin-bottom: 25px;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 15px;
+      font-size: 14px;
+      margin-bottom: 35px;
+    }
+
+    th, td {
+      padding: 11px;
+      border-bottom: 1px solid #ddd;
+      text-align: left;
+    }
+
+    th {
+      background-color: #eeeeee;
+    }
+
+    code {
+      background: #eeeeee;
+      padding: 3px 7px;
+    }
+
+    pre {
+      background: #f7f7f7;
+      padding: 15px;
+      border-radius: 8px;
+    }
+
+    .ok {
+      font-weight: bold;
+      color: #2e7d32;
+    }
+
+    .low {
+      font-weight: bold;
+      color: #c62828;
+    }
+
+    .alert {
+      font-weight: bold;
+      color: #c62828;
+    }
+  </style>
+</head>
+
+<body>
+
+<h1>UI-10: Inventory Stock Alert using Kafka</h1>
+
+<div class="info">
+  <h3>Kafka Flow</h3>
+
+  <p>
+    Inventory updates are published to <code>inventory-events-topic</code>.
+    The consumer checks the stock quantity.
+    If stock is low, a new alert event is published to <code>stock-alert-topic</code>.
+  </p>
+
+  <pre>
+Inventory UI
+    ↓
+inventory-events-topic
+    ↓
+InventoryEventConsumer
+    ↓
+if currentStock &lt;= reorderThreshold
+    ↓
+stock-alert-topic
+    ↓
+StockAlertConsumer
+    ↓
+Dashboard
+    </pre>
+</div>
+
+<div class="clarification">
+  <h3>Important Clarification</h3>
+
+  <p>
+    Kafka is responsible for storing and delivering events through topics.
+  </p>
+
+  <p>
+    Kafka is not deciding whether stock is low.
+    The low-stock check is written in Java application code.
+  </p>
+
+  <p>
+    The dashboard tables are also application-level views.
+    They are stored in memory using Java collections.
+    Kafka's actual event log is inside topic partitions.
+  </p>
+</div>
+
+<div th:if="${message}" class="success">
+  <h3>Kafka Event Published</h3>
+  <p th:text="${message}"></p>
+  <p>Product ID: <b th:text="${productId}"></b></p>
+</div>
+
+<div class="container">
+
+  <div>
+
+    <div class="card">
+      <h2>Publish Inventory Update</h2>
+
+      <form method="post" action="/inventory-events">
+
+        <label>Product ID</label>
+        <input type="text" name="productId" value="PROD-101" required>
+
+        <label>Product Name</label>
+        <input type="text" name="productName" value="Laptop" required>
+
+        <label>Current Stock</label>
+        <input type="number" name="currentStock" value="25" required>
+
+        <label>Reorder Threshold</label>
+        <input type="number" name="reorderThreshold" value="10" required>
+
+        <label>Warehouse Location</label>
+        <select name="warehouseLocation" required>
+          <option value="Hyderabad Warehouse">Hyderabad Warehouse</option>
+          <option value="Bengaluru Warehouse">Bengaluru Warehouse</option>
+          <option value="Mumbai Warehouse">Mumbai Warehouse</option>
+          <option value="Delhi Warehouse">Delhi Warehouse</option>
+        </select>
+
+        <button type="submit">Publish Inventory Event</button>
+
+      </form>
+    </div>
+
+    <div class="card">
+      <h2>Quick Test Values</h2>
+
+      <pre>
+Stock OK:
+Current Stock = 25
+Threshold     = 10
+
+Low Stock:
+Current Stock = 5
+Threshold     = 10
+
+Critical:
+Current Stock = 0
+Threshold     = 10
+            </pre>
+    </div>
+
+    <div class="card">
+      <h2>Clear Dashboard</h2>
+
+      <form method="post" action="/clear">
+        <button class="danger" type="submit">Clear Application View</button>
+      </form>
+    </div>
+
+  </div>
+
+  <div class="wide-card">
+
+    <h2>Current Inventory Status - Application View</h2>
+
+    <table>
+      <thead>
+      <tr>
+        <th>Product ID</th>
+        <th>Product</th>
+        <th>Stock</th>
+        <th>Threshold</th>
+        <th>Warehouse</th>
+        <th>Status</th>
+        <th>Last Updated</th>
+      </tr>
+      </thead>
+
+      <tbody>
+      <tr th:each="entry : ${inventory}">
+        <td th:text="${entry.value.productId}"></td>
+        <td th:text="${entry.value.productName}"></td>
+        <td th:text="${entry.value.currentStock}"></td>
+        <td th:text="${entry.value.reorderThreshold}"></td>
+        <td th:text="${entry.value.warehouseLocation}"></td>
+
+        <td th:if="${entry.value.stockStatus == 'STOCK_OK'}"
+            class="ok"
+            th:text="${entry.value.stockStatus}">
+        </td>
+
+        <td th:if="${entry.value.stockStatus == 'LOW_STOCK'}"
+            class="low"
+            th:text="${entry.value.stockStatus}">
+        </td>
+
+        <td th:text="${entry.value.lastUpdatedTime}"></td>
+      </tr>
+      </tbody>
+    </table>
+
+    <h2>Stock Alerts - Application View</h2>
+
+    <table>
+      <thead>
+      <tr>
+        <th>Alert ID</th>
+        <th>Product ID</th>
+        <th>Product</th>
+        <th>Stock</th>
+        <th>Threshold</th>
+        <th>Alert Level</th>
+        <th>Message</th>
+        <th>Time</th>
+      </tr>
+      </thead>
+
+      <tbody>
+      <tr th:each="alert : ${alerts}">
+        <td th:text="${alert.alertId}"></td>
+        <td th:text="${alert.productId}"></td>
+        <td th:text="${alert.productName}"></td>
+        <td th:text="${alert.currentStock}"></td>
+        <td th:text="${alert.reorderThreshold}"></td>
+        <td class="alert" th:text="${alert.alertLevel}"></td>
+        <td th:text="${alert.alertMessage}"></td>
+        <td th:text="${alert.eventTime}"></td>
+      </tr>
+      </tbody>
+    </table>
+
+    <h2>Consumed Inventory Events - Application View</h2>
+
+    <p>
+      This table is maintained by the Spring Boot application.
+      Kafka stores the actual event log inside topic partitions.
+    </p>
+
+    <table>
+      <thead>
+      <tr>
+        <th>Consumer</th>
+        <th>Event Type</th>
+        <th>Product ID</th>
+        <th>Product</th>
+        <th>Topic</th>
+        <th>Partition</th>
+        <th>Offset</th>
+        <th>Message</th>
+      </tr>
+      </thead>
+
+      <tbody>
+      <tr th:each="log : ${inventoryLogs}">
+        <td th:text="${log.eventSource}"></td>
+        <td th:text="${log.eventType}"></td>
+        <td th:text="${log.productId}"></td>
+        <td th:text="${log.productName}"></td>
+        <td th:text="${log.topic}"></td>
+        <td th:text="${log.partition}"></td>
+        <td th:text="${log.offset}"></td>
+        <td th:text="${log.message}"></td>
+      </tr>
+      </tbody>
+    </table>
+
+    <h2>Consumed Stock Alert Events - Application View</h2>
+
+    <table>
+      <thead>
+      <tr>
+        <th>Consumer</th>
+        <th>Event Type</th>
+        <th>Product ID</th>
+        <th>Product</th>
+        <th>Topic</th>
+        <th>Partition</th>
+        <th>Offset</th>
+        <th>Message</th>
+      </tr>
+      </thead>
+
+      <tbody>
+      <tr th:each="log : ${alertLogs}">
+        <td th:text="${log.eventSource}"></td>
+        <td th:text="${log.eventType}"></td>
+        <td th:text="${log.productId}"></td>
+        <td th:text="${log.productName}"></td>
+        <td th:text="${log.topic}"></td>
+        <td th:text="${log.partition}"></td>
+        <td th:text="${log.offset}"></td>
+        <td th:text="${log.message}"></td>
+      </tr>
+      </tbody>
+    </table>
+
+  </div>
+
+</div>
+
+</body>
+</html>
